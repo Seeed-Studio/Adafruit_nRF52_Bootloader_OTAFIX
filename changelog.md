@@ -3,6 +3,13 @@
 OTAFIX 2.1–2.5 are Meshtastic's fork; everything from 0.6.2 down predates
 it and is upstream Adafruit history, kept for provenance.
 
+## OTAFIX 2.6
+
+- USB DFU sessions now exit to the application when the cable is unplugged: once a host has enumerated the device (`tud_mount_cb()` latches `m_usb_was_mounted` in `bootloader.c`), losing VBUS aborts the wait loop through the existing `DFU_TIMEOUT` path. Previously a device left sitting in the bootloader stayed there blinking until its battery died. Ported from upstream Adafruit PR #390 (`auto-reboot-on-usb-disconnected`, commits `57ce8b2` and `64f1b70`).
+- The startup-timeout cancel condition is generalized: the serial-only `dfu_startup_packet_received` flag is replaced by `bootloader_dfu_activity_mark()`, set by the serial transport and by successful UF2 `write_block()` traffic (which also covers the factory-erase request block). Host writes that are not UF2 traffic (FAT table upkeep) still do not count as activity. Same upstream PR.
+- DFU inactivity watchdog ported from upstream commit `efe383d`: `dfu_init()` arms a 6-minute single-shot timer (`DFU_TIMEOUT_INTERVAL`); every valid start/init/data packet restarts it, and the UF2 write path restarts it too (upstream misses the UF2 hook — without it a slow UF2 copy could be aborted mid-transfer). When it fires with the link silent, the session exits through the same `DFU_TIMEOUT` path. This covers the wait-forever modes the USB-only fixes above cannot reach: double-reset UF2 and BLE OTA sessions. Deliberate fork deviation: the watchdog is only armed when `bootloader_app_is_valid()` — an application-less device keeps OTAFIX 2.1 "advertise and wait" semantics instead of resetting in a 6-minute loop.
+- Scope kept intentionally narrow: BLE OTA sessions ignore the USB unplug/startup-timeout paths (the `!ota` gate is unchanged), and the double-reset entry still has no 3 s startup timeout (the `(0, false)` call is unchanged).
+
 ## OTAFIX 2.5
 
 - New board: Seeed Studio SenseCAP MeshTracker X1 (OTA DFU advertising name `MTX1_DFU`). The X1 exposes one user button and no usable RESET button, so double-press reset cannot reach DFU. It instead opts into a new `BUTTON_DFU_HOLD` scheme in `main.c`: holding the primary button through boot for `BUTTON_DFU_HOLD_MS` (3 s) enters UF2 DFU, and a board defining it skips the normal momentary `BUTTON_DFU`/`BUTTON_FRESET` checks so that a short press stays with the application. No behavior change for any other board.
