@@ -266,6 +266,18 @@ static void check_dfu_mode(void) {
       if (held_ms >= BUTTON_DFU_HOLD_MS) {
         dfu_start = true;
         uf2_dfu   = true;
+#if LED_RED_PIN
+        nrf_gpio_cfg_output(LED_RED_PIN);
+        nrf_gpio_pin_set(LED_RED_PIN);
+#endif
+#if LED_GREEN_PIN
+        nrf_gpio_cfg_output(LED_GREEN_PIN);
+        nrf_gpio_pin_set(LED_GREEN_PIN);
+#endif
+#if LED_BLUE_PIN
+        nrf_gpio_cfg_output(LED_BLUE_PIN);
+        nrf_gpio_pin_set(LED_BLUE_PIN);
+#endif
         break;
       }
       NRFX_DELAY_MS(BUTTON_DFU_HOLD_POLL_MS);
