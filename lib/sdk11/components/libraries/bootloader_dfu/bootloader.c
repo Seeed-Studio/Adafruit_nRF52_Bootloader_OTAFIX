@@ -52,7 +52,32 @@ static bootloader_status_t      m_update_status;        /**< Current update stat
 static bool m_cancel_timeout_on_usb; /**< If set the timeout is cancelled when USB is enumerated. Otherwise, the timeout is only cancelled when DFU update is started. */
 
 APP_TIMER_DEF( _dfu_startup_timer );
-volatile bool dfu_startup_packet_received = false;
+
+static bool m_usb_was_mounted;           /**< Tracks whether the USB DFU session was ever enumerated so we can exit when cable is later removed. */
+static bool m_startup_dfu_has_activity;  /**< Tracks whether any valid serial or UF2 update traffic has started. */
+
+/* Fire the DFU_TIMEOUT exit unless real update activity has started.
+ * Used by both the startup timer and the USB-unplug path in wait_for_events(). */
+static void bootloader_timeout_startup_dfu(void)
+{
+    if ( !m_startup_dfu_has_activity )
+    {
+        dfu_update_status_t update_status;
+        update_status.status_code = DFU_TIMEOUT;
+
+        bootloader_dfu_update_process(update_status);
+    }
+}
+
+void bootloader_dfu_activity_mark(void)
+{
+    m_startup_dfu_has_activity = true;
+}
+
+void bootloader_mark_usb_mounted(void)
+{
+    m_usb_was_mounted = true;
+}
 
 /**@brief   Function for handling callbacks from pstorage module.
  *
@@ -81,22 +106,17 @@ static void pstorage_callback_handler(pstorage_handle_t * p_handle,
 static void dfu_startup_timer_handler(void * p_context)
 {
 #ifdef NRF_USBD
-  if (m_cancel_timeout_on_usb && tud_mounted())
+  // If host enumerated the device, keep waiting: m_usb_was_mounted was set
+  // by tud_mount_cb() and the unplug path in wait_for_events() will handle exit.
+  if (m_cancel_timeout_on_usb && m_usb_was_mounted)
   {
     return;
   }
 #endif
 
   // nRF52832 forced DFU on startup
-  // No packets are received within timeout, exit DFU mode
-  // dfu_startup_packet_received is set by process_dfu_packet() in dfu_transport_serial.c
-  if (!dfu_startup_packet_received)
-  {
-    dfu_update_status_t update_status;
-    update_status.status_code = DFU_TIMEOUT;
-
-    bootloader_dfu_update_process(update_status);
-  }
+  // No update activity is received within timeout, exit DFU mode
+  bootloader_timeout_startup_dfu();
 }
 
 /**@brief   Function for waiting for events.
@@ -131,6 +151,14 @@ static void wait_for_events(void)
     {
       tud_task();
       tud_cdc_write_flush();
+    }
+
+    // Exit startup DFU once USB was actually unplugged (VBUS gone), not on a
+    // host-side re-enumeration or temporary unmount.
+    if (m_cancel_timeout_on_usb && m_usb_was_mounted &&
+        !(NRF_POWER->USBREGSTATUS & POWER_USBREGSTATUS_VBUSDETECT_Msk))
+    {
+      bootloader_timeout_startup_dfu();
     }
 #endif
 
@@ -325,6 +353,8 @@ uint32_t bootloader_dfu_start(bool ota, uint32_t timeout_ms, bool cancel_timeout
   uint32_t err_code;
 
   m_cancel_timeout_on_usb = cancel_timeout_on_usb && !ota;
+  m_usb_was_mounted = false;
+  m_startup_dfu_has_activity = false;
 
   // Clear swap if banked update is used.
   err_code = dfu_init();
@@ -340,8 +370,6 @@ uint32_t bootloader_dfu_start(bool ota, uint32_t timeout_ms, bool cancel_timeout
     // - Makecode single tap reset but no enumerated (battery power)
     if ( timeout_ms )
     {
-      dfu_startup_packet_received = false;
-
       app_timer_create(&_dfu_startup_timer, APP_TIMER_MODE_SINGLE_SHOT, dfu_startup_timer_handler);
       app_timer_start(_dfu_startup_timer, APP_TIMER_TICKS(timeout_ms), NULL);
     }

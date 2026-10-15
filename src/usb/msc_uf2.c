@@ -28,6 +28,7 @@
 #if CFG_TUD_MSC
 
 #include "bootloader.h"
+#include "dfu.h" // dfu_timer_restart(): UF2 blocks count as peer activity for the DFU inactivity timer
 #include "nrfx_nvmc.h"
 #include "app_timer.h"
 
@@ -183,9 +184,24 @@ int32_t tud_msc_write10_cb (uint8_t lun, uint32_t lba, uint32_t offset, uint8_t*
   uint32_t count = 0;
   while ( count < bufsize )
   {
+    int written;
+
     // Consider non-uf2 block write as successful
     // only break if write_block is busy with flashing (return 0)
-    if ( 0 == write_block(lba, buffer, &_wr_state) ) break;
+    written = write_block(lba, buffer, &_wr_state);
+    if ( written > 0 )
+    {
+      // Real UF2 traffic (also covers the factory-erase request block):
+      // cancels the startup timeout / USB-unplug exit for this session,
+      // and restarts the DFU inactivity watchdog so long copies are not
+      // aborted mid-transfer.
+      bootloader_dfu_activity_mark();
+      (void) dfu_timer_restart();
+    }
+    else if ( written == 0 )
+    {
+      break;
+    }
 
     lba++;
     buffer += 512;

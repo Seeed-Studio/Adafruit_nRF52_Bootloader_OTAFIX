@@ -35,10 +35,21 @@
 typedef void (*dfu_callback_t)(uint32_t packet, uint32_t  result, uint8_t * p_data);
 
 /**@brief Function for initializing the Device Firmware Update module.
- * 
+ *
  * @return    NRF_SUCCESS on success, an error_code otherwise.
  */
 uint32_t dfu_init(void);
+
+/**@brief Restarts the DFU inactivity timer (period DFU_TIMEOUT_INTERVAL).
+ *
+ * @details Called for every valid DFU packet and every accepted UF2 block. When the
+ *          watchdog is not armed (no valid application to exit into) it is a no-op
+ *          that returns NRF_SUCCESS.
+ *
+ * @retval NRF_SUCCESS                Timer restarted, or not armed (no-op).
+ * @retval NRF_ERROR_INVALID_STATE    DFU had already timed out.
+ */
+uint32_t dfu_timer_restart(void);
 
 /**@brief Function for registering a callback listener for \ref dfu_data_pkt_handle callbacks.
  *
