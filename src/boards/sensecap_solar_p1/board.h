@@ -58,9 +58,9 @@
 #define USB_DESC_CDC_ONLY_PID  0x0044
 
 //------------- UF2 -------------//
-#define UF2_PRODUCT_NAME   "Seeed Solar Node P1"
-#define UF2_VOLUME_LABEL   "SENSECAP"
-#define UF2_BOARD_ID       "nRF52840-SeeedSenseCAPSolarP1-v1"
-#define UF2_INDEX_URL      "https://www.seeedstudio.com/"
+#define UF2_PRODUCT_NAME   "SenseCAP Solar Node"
+#define UF2_VOLUME_LABEL   "SOLAR NODE"
+#define UF2_BOARD_ID       "SenseCAP Solar Node"
+#define UF2_INDEX_URL      "https://wiki.seeedstudio.com/solar_node/"
 
 #endif // _SEEED_SOLAR_NODE_P1_H
