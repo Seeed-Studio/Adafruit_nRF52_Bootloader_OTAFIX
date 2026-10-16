@@ -58,9 +58,9 @@
 #define USB_DESC_CDC_ONLY_PID  0x1667
 
 //------------- UF2 -------------//
-#define UF2_PRODUCT_NAME   "Seeed TRACKER L1"
+#define UF2_PRODUCT_NAME   "Wio Tracker L1"
 #define UF2_VOLUME_LABEL   "TRACKER L1"
-#define UF2_BOARD_ID       "TRACKER L1"
-#define UF2_INDEX_URL      "https://www.seeedstudio.com/"
+#define UF2_BOARD_ID       "Tracker L1"
+#define UF2_INDEX_URL      "https://wiki.seeedstudio.com/wio_tracker_node/"
 
 #endif // _TRACKER_L1
