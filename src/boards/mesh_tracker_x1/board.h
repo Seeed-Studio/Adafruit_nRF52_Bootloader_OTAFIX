@@ -89,9 +89,9 @@
 //--------------------------------------------------------------------+
 // UF2
 //--------------------------------------------------------------------+
-#define UF2_PRODUCT_NAME        "Seeed MeshTracker-X1 for Meshtastic"
+#define UF2_PRODUCT_NAME        "SenseCAP MeshTracker X1"
 #define UF2_VOLUME_LABEL        "X1"
-#define UF2_BOARD_ID            "nRF52840-MeshTracker-X1"
+#define UF2_BOARD_ID            "MeshTracker X1"
 #define UF2_INDEX_URL           "https://wiki.seeedstudio.com/meshtracker_x1_node"
 
 
